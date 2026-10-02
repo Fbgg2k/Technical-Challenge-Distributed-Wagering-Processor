@@ -4,6 +4,7 @@ import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { mikroOrmConfig } from './infrastructure/database/mikro-orm.config';
 import { WalletsController } from './presentation/http/wallets/wallets.controller';
 import { WageringController } from './presentation/http/wagering/wagering.controller';
+import { WagerTransactionConsumer } from './presentation/messaging/consumers/wager-transaction.consumer';
 
 @Module({
   imports: [
@@ -11,5 +12,6 @@ import { WageringController } from './presentation/http/wagering/wagering.contro
     MikroOrmModule.forRoot(mikroOrmConfig),
   ],
   controllers: [WalletsController, WageringController],
+  providers: [WagerTransactionConsumer],
 })
 export class AppModule {}

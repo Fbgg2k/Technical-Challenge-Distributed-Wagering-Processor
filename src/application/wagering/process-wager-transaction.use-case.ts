@@ -66,7 +66,10 @@ const BUSINESS_FIELDS = [
 export class ProcessWagerTransactionUseCase {
   constructor(private readonly em: EntityManager) {}
 
-  async execute(input: ProcessTransactionInput): Promise<ProcessTransactionResult> {
+  async execute(
+    input: ProcessTransactionInput,
+    options?: { inbox?: { messageId: string; consumerName: string; payloadHash: string; receivedAt: Date } },
+  ): Promise<ProcessTransactionResult> {
     let money: Money;
     try {
       money = Money.from(input.money);
@@ -98,6 +101,32 @@ export class ProcessWagerTransactionUseCase {
       const txRepo = new WagerTransactionOrmRepository(em);
       const walletRepo = new WalletOrmRepository(em);
       const ledgerRepo = new LedgerEntryOrmRepository(em);
+
+      // ---- Inbox: persiste a mensagem na MESMA transação ----
+      if (options?.inbox) {
+        const { InboxMessageOrmEntity } = await import(
+          '../../infrastructure/database/entities/inbox-message.orm-entity'
+        );
+        const existingMsg = await em.findOne(InboxMessageOrmEntity, {
+          messageId: options.inbox.messageId,
+          consumerName: options.inbox.consumerName,
+        });
+        if (existingMsg) {
+          return {
+            transactionId: `inbox:${options.inbox.messageId}`,
+            status: WagerTransactionStatus.Processed,
+            idempotentReplay: true,
+          };
+        }
+        const inboxOrm = em.create(InboxMessageOrmEntity, {
+          messageId: options.inbox.messageId,
+          consumerName: options.inbox.consumerName,
+          payloadHash: options.inbox.payloadHash,
+          receivedAt: options.inbox.receivedAt,
+          processedAt: new Date(),
+        });
+        em.persist(inboxOrm);
+      }
 
       // ---- Idempotência persistente ----
       const existing = await txRepo.findByIdempotencyKey(input.idempotencyKey);

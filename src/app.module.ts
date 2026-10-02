@@ -6,6 +6,7 @@ import { WalletsController } from './presentation/http/wallets/wallets.controlle
 import { WageringController } from './presentation/http/wagering/wagering.controller';
 import { WagerTransactionConsumer } from './presentation/messaging/consumers/wager-transaction.consumer';
 import { OutboxPublisher } from './infrastructure/messaging/outbox/outbox-publisher.service';
+import { PendingReferenceWorker } from './infrastructure/messaging/outbox/pending-reference.worker';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { OutboxPublisher } from './infrastructure/messaging/outbox/outbox-publis
     MikroOrmModule.forRoot(mikroOrmConfig),
   ],
   controllers: [WalletsController, WageringController],
-  providers: [WagerTransactionConsumer, OutboxPublisher],
+  providers: [WagerTransactionConsumer, OutboxPublisher, PendingReferenceWorker],
 })
 export class AppModule {}

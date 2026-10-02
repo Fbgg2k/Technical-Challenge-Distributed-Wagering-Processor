@@ -319,7 +319,7 @@ export class ProcessWagerTransactionUseCase {
     return e?.code === '23505' || e?.cause?.code === '23505' || /duplicate key|unique/i.test(e?.message ?? '');
   }
 
-  private async processReversal(
+  async processReversal(
     em: EntityManager,
     tx: WagerTransaction,
     wallet: Wallet,
@@ -418,6 +418,74 @@ export class ProcessWagerTransactionUseCase {
       balance: wallet.balance.toJSON(),
       idempotentReplay: false,
     };
+  }
+
+  /** Reprocessa uma transação em PENDING_REFERENCE após backoff. */
+  async retryPendingReference(txId: string, maxAttempts = 8): Promise<void> {
+    await this.em.transactional(async (em) => {
+      const txRepo = new WagerTransactionOrmRepository(em);
+      const walletRepo = new WalletOrmRepository(em);
+      const tx = await txRepo.findById(txId);
+      if (!tx || tx.status !== WagerTransactionStatus.PendingReference) {
+        return;
+      }
+
+      const walletOrm = await em.findOne(
+        WalletOrmEntity,
+        { id: tx.walletId },
+        { lockMode: LockMode.PESSIMISTIC_WRITE },
+      );
+      if (!walletOrm) {
+        tx.reject(FailureCode.WalletNotFound);
+        await txRepo.save(tx);
+        return;
+      }
+      const wallet = Wallet.rehydrate({
+        id: walletOrm.id,
+        playerId: walletOrm.playerId,
+        currency: walletOrm.currency,
+        balanceAmount: walletOrm.balanceAmount,
+        version: walletOrm.version,
+        createdAt: walletOrm.createdAt,
+        updatedAt: walletOrm.updatedAt,
+      });
+
+      const input: ProcessTransactionInput = {
+        providerId: tx.providerId,
+        externalTransactionId: tx.externalTransactionId,
+        idempotencyKey: tx.idempotencyKey,
+        playerId: tx.playerId,
+        walletId: tx.walletId,
+        roundId: tx.roundId,
+        gameId: tx.gameId,
+        kind: tx.kind,
+        money: tx.money.toJSON(),
+        referenceExternalTransactionId: tx.referenceExternalTransactionId,
+      };
+
+      const reject = async (code: FailureCode): Promise<ProcessTransactionResult> => {
+        tx.reject(code);
+        await txRepo.save(tx);
+        await this.enqueue(em, WagerTransactionRejected.from(tx, { correlationId: tx.id }));
+        return { transactionId: tx.id, status: tx.status, failureCode: code, balance: wallet.balance.toJSON(), idempotentReplay: false };
+      };
+
+      const exists = await txRepo.findByProviderAndExternalId(tx.providerId, tx.referenceExternalTransactionId!);
+      if (!exists) {
+        tx.markPendingReference();
+        const canRetry = tx.scheduleReferenceRetry(new Date(), maxAttempts);
+        if (!canRetry) {
+          tx.reject(FailureCode.ReferenceNotFound);
+          await txRepo.save(tx);
+          await this.enqueue(em, WagerTransactionRejected.from(tx, { correlationId: tx.id }));
+          return;
+        }
+        await txRepo.save(tx);
+        return;
+      }
+
+      await this.processReversal(em, tx, wallet, input, tx.money, reject);
+    });
   }
 
   private async afterProcessed(

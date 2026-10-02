@@ -61,6 +61,12 @@ export class WagerTransactionOrmEntity {
   @Property({ type: 'timestamptz', nullable: true })
   processedAt?: Date;
 
+  @Property({ type: 'integer', default: 0 })
+  referenceAttempts = 0;
+
+  @Property({ type: 'timestamptz', nullable: true })
+  referenceNextAttemptAt?: Date;
+
   @Property({ type: 'timestamptz' })
   createdAt!: Date;
 }

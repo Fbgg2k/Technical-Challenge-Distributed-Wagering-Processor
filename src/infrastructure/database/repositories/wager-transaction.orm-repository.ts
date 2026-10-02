@@ -26,6 +26,8 @@ export class WagerTransactionOrmRepository {
       status: orm.status,
       failureCode: orm.failureCode as FailureCode | undefined,
       processedAt: orm.processedAt,
+      referenceAttempts: orm.referenceAttempts,
+      referenceNextAttemptAt: orm.referenceNextAttemptAt,
       createdAt: orm.createdAt,
     });
   }
@@ -81,6 +83,8 @@ export class WagerTransactionOrmRepository {
         status: tx.status,
         failureCode: tx.failureCode,
         processedAt: tx.processedAt,
+        referenceAttempts: tx.referenceAttempts,
+        referenceNextAttemptAt: tx.referenceNextAttemptAt,
         createdAt: tx.createdAt,
       });
       this.em.persist(orm);
@@ -89,6 +93,8 @@ export class WagerTransactionOrmRepository {
       orm.failureCode = tx.failureCode;
       orm.processedAt = tx.processedAt;
       orm.referenceTransactionId = tx.referenceTransactionId;
+      orm.referenceAttempts = tx.referenceAttempts;
+      orm.referenceNextAttemptAt = tx.referenceNextAttemptAt;
     }
     await this.em.flush();
   }

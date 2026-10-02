@@ -47,6 +47,7 @@ services:
       SQS_ENDPOINT: http://localstack:4566
       SQS_CONSUMER_ENABLED: "true"
       OUTBOX_PUBLISHER_ENABLED: "true"
+      PENDING_REFERENCE_WORKER_ENABLED: "true"
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test

@@ -38,6 +38,8 @@ export interface WagerTransactionState {
   currency: string;
   referenceExternalTransactionId?: string;
   referenceTransactionId?: string;
+  referenceAttempts?: number;
+  referenceNextAttemptAt?: Date;
   status: WagerTransactionStatus;
   failureCode?: FailureCode;
   processedAt?: Date;
@@ -63,6 +65,8 @@ export class WagerTransaction {
     private _referenceTransactionId?: string,
     private _failureCode?: FailureCode,
     private _processedAt?: Date,
+    private _referenceAttempts = 0,
+    private _referenceNextAttemptAt?: Date,
   ) {}
 
   static create(props: CreateWagerTransactionProps): WagerTransaction {
@@ -140,6 +144,8 @@ export class WagerTransaction {
       state.referenceTransactionId,
       state.failureCode,
       state.processedAt,
+      state.referenceAttempts ?? 0,
+      state.referenceNextAttemptAt,
     );
   }
 
@@ -155,6 +161,12 @@ export class WagerTransaction {
   get processedAt(): Date | undefined {
     return this._processedAt;
   }
+  get referenceAttempts(): number {
+    return this._referenceAttempts;
+  }
+  get referenceNextAttemptAt(): Date | undefined {
+    return this._referenceNextAttemptAt;
+  }
   get requiresReference(): boolean {
     return this.kind === WagerTransactionKind.Refund || this.kind === WagerTransactionKind.Rollback;
   }
@@ -164,11 +176,24 @@ export class WagerTransaction {
     this._status = WagerTransactionStatus.Processed;
     this._referenceTransactionId = referenceTransactionId;
     this._processedAt = at;
+    this._referenceNextAttemptAt = undefined;
   }
 
   markPendingReference(): void {
     this.assertNotTerminal();
     this._status = WagerTransactionStatus.PendingReference;
+    this._referenceNextAttemptAt = new Date();
+  }
+
+  /** Registra uma tentativa de resolver a referência e agenda a próxima com backoff exponencial. */
+  scheduleReferenceRetry(now: Date, maxAttempts: number): boolean {
+    this._referenceAttempts += 1;
+    if (this._referenceAttempts >= maxAttempts) {
+      return false;
+    }
+    const backoff = Math.min(2 ** this._referenceAttempts * 1000, 60_000);
+    this._referenceNextAttemptAt = new Date(now.getTime() + backoff);
+    return true;
   }
 
   reject(code: FailureCode): void {

@@ -93,7 +93,8 @@ export class ProcessWagerTransactionUseCase {
     }
     const payloadHash = canonicalPayloadHash(payloadSubset);
 
-    return this.em.transactional(async (em) => {
+    try {
+      return await this.em.transactional(async (em) => {
       const txRepo = new WagerTransactionOrmRepository(em);
       const walletRepo = new WalletOrmRepository(em);
       const ledgerRepo = new LedgerEntryOrmRepository(em);
@@ -119,6 +120,16 @@ export class ProcessWagerTransactionUseCase {
         input.externalTransactionId,
       );
       if (sameExternal) {
+        if (sameExternal.idempotencyKey === input.idempotencyKey && sameExternal.matchesPayload(payloadHash)) {
+          const wallet = await walletRepo.findById(sameExternal.walletId);
+          return {
+            transactionId: sameExternal.id,
+            status: sameExternal.status,
+            failureCode: sameExternal.failureCode,
+            balance: wallet?.balance.toJSON(),
+            idempotentReplay: true,
+          };
+        }
         throw new ConflictException('transaction already exists with different idempotency key');
       }
 
@@ -252,6 +263,31 @@ export class ProcessWagerTransactionUseCase {
           throw new BadRequestException('unsupported kind');
       }
     });
+    } catch (err) {
+      // Concorrência: outro request commitou a mesma idempotencyKey primeiro.
+      if (this.isUniqueViolation(err)) {
+        const existing = await new WagerTransactionOrmRepository(this.em).findByIdempotencyKey(
+          input.idempotencyKey,
+        );
+        if (existing && existing.matchesPayload(payloadHash)) {
+          const wallet = await new WalletOrmRepository(this.em).findById(existing.walletId);
+          return {
+            transactionId: existing.id,
+            status: existing.status,
+            failureCode: existing.failureCode,
+            balance: wallet?.balance.toJSON(),
+            idempotentReplay: true,
+          };
+        }
+        throw new ConflictException('idempotency key conflict: different payload');
+      }
+      throw err;
+    }
+  }
+
+  private isUniqueViolation(err: unknown): boolean {
+    const e = err as { code?: string; message?: string; cause?: { code?: string } };
+    return e?.code === '23505' || e?.cause?.code === '23505' || /duplicate key|unique/i.test(e?.message ?? '');
   }
 
   private async processReversal(

@@ -15,7 +15,8 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "bun test",
     "test:unit": "bun test test/unit",
-    "test:integration": "bun test test/integration"
+    "test:integration": "bun test test/integration",
+    "test:concurrency": "bun test test/concurrency"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.658.1",
@@ -40,6 +41,7 @@
     "@mikro-orm/knex": "6.4.2",
     "@nestjs/cli": "^10.4.9",
     "@nestjs/testing": "^10.4.15",
+    "@types/bun": "^1.4.2",
     "@types/node": "^22.7.5",
     "ajv": "^8.20.0",
     "ajv-draft-04": "^1.0.0",

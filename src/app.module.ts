@@ -5,6 +5,7 @@ import { mikroOrmConfig } from './infrastructure/database/mikro-orm.config';
 import { WalletsController } from './presentation/http/wallets/wallets.controller';
 import { WageringController } from './presentation/http/wagering/wagering.controller';
 import { WagerTransactionConsumer } from './presentation/messaging/consumers/wager-transaction.consumer';
+import { OutboxPublisher } from './infrastructure/messaging/outbox/outbox-publisher.service';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { WagerTransactionConsumer } from './presentation/messaging/consumers/wag
     MikroOrmModule.forRoot(mikroOrmConfig),
   ],
   controllers: [WalletsController, WageringController],
-  providers: [WagerTransactionConsumer],
+  providers: [WagerTransactionConsumer, OutboxPublisher],
 })
 export class AppModule {}

@@ -81,7 +81,8 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
   }
 
   private async publishOne(id: string): Promise<void> {
-    const orm = await this.em.fork().findOne(OutboxMessageOrmEntity, { id });
+    const em = this.em.fork();
+    const orm = await em.findOne(OutboxMessageOrmEntity, { id });
     if (!orm || orm.publishedAt) return;
     try {
       await this.client.send(
@@ -94,15 +95,15 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
       );
       orm.publishedAt = new Date();
       orm.nextAttemptAt = undefined;
-      await this.em.fork().persistAndFlush(orm);
+      await em.persistAndFlush(orm);
     } catch (err) {
-      const em = this.em.fork();
-      const row = await em.findOne(OutboxMessageOrmEntity, { id });
+      const retryEm = this.em.fork();
+      const row = await retryEm.findOne(OutboxMessageOrmEntity, { id });
       if (row) {
         row.attempts += 1;
         const backoff = Math.min(2 ** row.attempts * 1000, 60_000);
         row.nextAttemptAt = new Date(Date.now() + backoff);
-        await em.persistAndFlush(row);
+        await retryEm.persistAndFlush(row);
       }
       this.logger.error(`publish failed for ${id}: ${(err as Error).message}`);
     }

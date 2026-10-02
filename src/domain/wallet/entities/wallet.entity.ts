@@ -60,16 +60,21 @@ export class Wallet {
         `insufficient funds: balance ${this._balance} < debit ${money}`,
       );
     }
-    this._balance = next;
-    this._version += 1;
-    this._updatedAt = new Date();
+    if (!next.equals(this._balance)) {
+      this._balance = next;
+      this._version += 1;
+      this._updatedAt = new Date();
+    }
   }
 
   credit(money: Money): void {
     this.assertSameCurrency(money);
-    this._balance = this._balance.add(money);
-    this._version += 1;
-    this._updatedAt = new Date();
+    const next = this._balance.add(money);
+    if (!next.equals(this._balance)) {
+      this._balance = next;
+      this._version += 1;
+      this._updatedAt = new Date();
+    }
   }
 
   private assertSameCurrency(money: Money): void {

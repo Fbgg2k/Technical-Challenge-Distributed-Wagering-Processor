@@ -27,6 +27,7 @@ import { WalletOrmEntity } from '../../infrastructure/database/entities/wallet.o
 import { WagerTransactionOrmEntity } from '../../infrastructure/database/entities/wager-transaction.orm-entity';
 import { OutboxMessageOrmEntity } from '../../infrastructure/database/entities/outbox-message.orm-entity';
 import { canonicalPayloadHash } from '../shared/payload-hash';
+import { metrics } from '../../infrastructure/observability/metrics/metrics.service';
 
 export interface ProcessTransactionInput {
   providerId: string;
@@ -95,9 +96,11 @@ export class ProcessWagerTransactionUseCase {
       if (value !== undefined) payloadSubset[key] = value;
     }
     const payloadHash = canonicalPayloadHash(payloadSubset);
+    const end = metrics.processingLatency.startTimer();
 
+    let result: ProcessTransactionResult;
     try {
-      return await this.em.transactional(async (em) => {
+      result = await this.em.transactional(async (em) => {
       const txRepo = new WagerTransactionOrmRepository(em);
       const walletRepo = new WalletOrmRepository(em);
       const ledgerRepo = new LedgerEntryOrmRepository(em);
@@ -312,6 +315,11 @@ export class ProcessWagerTransactionUseCase {
       }
       throw err;
     }
+
+    metrics.transactionsByStatus.inc({ status: result.status, kind: input.kind });
+    if (result.idempotentReplay) metrics.duplicatesDetected.inc();
+    end();
+    return result;
   }
 
   private isUniqueViolation(err: unknown): boolean {

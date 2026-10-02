@@ -7,13 +7,15 @@ import { WageringController } from './presentation/http/wagering/wagering.contro
 import { WagerTransactionConsumer } from './presentation/messaging/consumers/wager-transaction.consumer';
 import { OutboxPublisher } from './infrastructure/messaging/outbox/outbox-publisher.service';
 import { PendingReferenceWorker } from './infrastructure/messaging/outbox/pending-reference.worker';
+import { HealthController } from './presentation/http/health/health.controller';
+import { MetricsController } from './presentation/http/metrics/metrics.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MikroOrmModule.forRoot(mikroOrmConfig),
   ],
-  controllers: [WalletsController, WageringController],
+  controllers: [WalletsController, WageringController, HealthController, MetricsController],
   providers: [WagerTransactionConsumer, OutboxPublisher, PendingReferenceWorker],
 })
 export class AppModule {}

@@ -1,15 +1,18 @@
 import { describe, test, expect, afterAll } from 'bun:test';
-import { getTestOrm, forkEm, closeTestOrm, newPlayerId } from '../helpers/test-db';
+import {
+  getTestOrm,
+  forkEm,
+  closeTestOrm,
+  newPlayerId,
+} from '../helpers/test-db';
 import { CreateWalletUseCase } from '../../src/application/wallets/create-wallet.use-case';
 import { ProcessWagerTransactionUseCase } from '../../src/application/wagering/process-wager-transaction.use-case';
 import { WagerTransactionKind } from '../../src/domain/wagering/enums/wager-kind.enum';
 import { WagerTransactionStatus } from '../../src/domain/wagering/enums/transaction-status.enum';
 import { FailureCode } from '../../src/domain/shared/errors/failure-code.enum';
 
-const ormPromise = getTestOrm();
-
 async function rawQuery<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const orm = await ormPromise;
+  const orm = await getTestOrm();
   return orm.em.getConnection().execute(sql, params) as unknown as T[];
 }
 
@@ -202,6 +205,62 @@ describe('cenários obrigatórios restantes', () => {
     );
     expect(tx[0].status).toBe('REJECTED');
     expect(tx[0].failure_code).toBe(FailureCode.ReferenceNotFound);
+  });
+
+  test('reinicialização do serviço: estado persistido e processamento retomado', async () => {
+    const { playerId, walletId } = await createWallet('100.00');
+    const r1 = await submit(
+      walletId,
+      playerId,
+      WagerTransactionKind.Bet,
+      '25.00',
+      `restart-bet-${Date.now()}`,
+    );
+    expect(r1.status).toBe(WagerTransactionStatus.Processed);
+
+    // simula morte do serviço: fecha o ORM (conexões encerradas)
+    await closeTestOrm();
+
+    // simula reinicialização: nova instância do serviço (ORM e conexões novos)
+    const restartedOrm = await getTestOrm();
+    expect(restartedOrm).toBeDefined();
+
+    // estado financeiro persistido sobrevive ao restart
+    const wallet = await rawQuery<{ balance_amount: string }>(
+      'select balance_amount from wallets where id = ?',
+      [walletId],
+    );
+    expect(wallet[0].balance_amount).toBe('75.00');
+
+    // processamento retomado na nova instância
+    const r2 = await submit(
+      walletId,
+      playerId,
+      WagerTransactionKind.Win,
+      '10.00',
+      `restart-win-${Date.now()}`,
+    );
+    expect(r2.status).toBe(WagerTransactionStatus.Processed);
+
+    const after = await rawQuery<{ balance_amount: string }>(
+      'select balance_amount from wallets where id = ?',
+      [walletId],
+    );
+    expect(after[0].balance_amount).toBe('85.00');
+
+    // ledger intacto: crédito de abertura + débito da BET + crédito do WIN
+    const debits = await rawQuery<{ c: string }>(
+      `select count(*) as c from wallet_ledger_entries
+       where wallet_id = ? and direction = 'DEBIT'`,
+      [walletId],
+    );
+    const credits = await rawQuery<{ c: string }>(
+      `select count(*) as c from wallet_ledger_entries
+       where wallet_id = ? and direction = 'CREDIT'`,
+      [walletId],
+    );
+    expect(Number(debits[0].c)).toBe(1);
+    expect(Number(credits[0].c)).toBe(2);
   });
 
   test('consistência final: wallet.balance == saldo reconstruído pelo ledger', async () => {

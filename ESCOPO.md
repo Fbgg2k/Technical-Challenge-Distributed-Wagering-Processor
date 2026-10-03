@@ -958,16 +958,16 @@ Testar:
 
 ## 22.3 Testes de concorrência
 
-- [ ] mesma aposta enviada 50 vezes em paralelo;
-- [ ] duas apostas concorrentes sobre o mesmo saldo;
-- [ ] wallets diferentes processadas em paralelo;
-- [ ] três ou mais instâncias simultâneas;
-- [ ] worker morto após commit e antes do ACK;
-- [ ] dois publishers sobre a mesma outbox;
-- [ ] ROLLBACK antes da referência;
-- [ ] REFUND antes da referência;
-- [ ] reinicialização do serviço;
-- [ ] verificação final de consistência.
+- [x] mesma aposta enviada 50 vezes em paralelo — `test/concurrency/concurrent-bets.test.ts` ("mesma aposta enviada 50 vezes em paralelo → um único débito");
+- [x] duas apostas concorrentes sobre o mesmo saldo — `test/concurrency/concurrent-bets.test.ts` ("duas apostas de 80 em saldo 100 → exatamente uma vence");
+- [x] wallets diferentes processadas em paralelo — `test/concurrency/concurrent-bets.test.ts` ("wallets diferentes processadas em paralelo preservam saldos independentes");
+- [x] três ou mais instâncias simultâneas — `test/concurrency/required-scenarios.test.ts` ("3 instâncias simultâneas sobre a mesma wallet");
+- [x] worker morto após commit e antes do ACK — `test/concurrency/required-scenarios.test.ts` ("REFUND antes da referência e worker morto antes do ack (redelivery)" — inbox persistida + redelivery idempotente);
+- [x] dois publishers sobre a mesma outbox — `test/integration/database-and-outbox.test.ts` ("dois publishers concorrentes não publicam em duplicidade", claim com `FOR UPDATE SKIP LOCKED`);
+- [x] ROLLBACK antes da referência — `test/concurrency/required-scenarios.test.ts` ("ROLLBACK entregue antes da referência (PENDING_REFERENCE)" + retry do worker);
+- [x] REFUND antes da referência — `test/concurrency/required-scenarios.test.ts` ("REFUND antes da referência e worker morto antes do ack");
+- [x] reinicialização do serviço — `test/concurrency/required-scenarios.test.ts` ("reinicialização do serviço: estado persistido e processamento retomado" — ORM fechado e reaberto no meio do teste; saldo e ledger intactos; nova transação processada na nova instância);
+- [x] verificação final de consistência — `test/concurrency/required-scenarios.test.ts` ("consistência final: wallet.balance == saldo reconstruído pelo ledger" em todas as wallets do banco de testes).
 
 Invariante:
 

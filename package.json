@@ -16,7 +16,8 @@
     "test": "bun test",
     "test:unit": "bun test test/unit",
     "test:integration": "bun test test/integration",
-    "test:concurrency": "bun test test/concurrency"
+    "test:concurrency": "bun test test/concurrency",
+    "test:e2e": "bun test test/concurrency/required-scenarios.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.658.1",

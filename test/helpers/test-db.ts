@@ -2,18 +2,19 @@ import { MikroORM, EntityManager } from '@mikro-orm/postgresql';
 import { randomUUID } from 'crypto';
 import { mikroOrmConfig } from '../../src/infrastructure/database/mikro-orm.config';
 
-let orm: MikroORM;
-let ormPromise: Promise<MikroORM>;
+let orm: MikroORM | undefined;
+let ormPromise: Promise<MikroORM> | undefined;
 
 export async function getTestOrm(): Promise<MikroORM> {
-  if (!ormPromise) {
+  if (!ormPromise || !orm) {
     ormPromise = MikroORM.init({
       ...mikroOrmConfig,
       dbName: process.env.DB_NAME_TEST ?? 'wagering_test',
       debug: false,
     }).then((o) => (orm = o));
+    orm = await ormPromise;
   }
-  return ormPromise;
+  return ormPromise!;
 }
 
 export async function forkEm(): Promise<EntityManager> {
@@ -24,6 +25,8 @@ export async function forkEm(): Promise<EntityManager> {
 export async function closeTestOrm(): Promise<void> {
   if (orm) {
     await orm.close();
+    orm = undefined;
+    ormPromise = undefined;
   }
 }
 

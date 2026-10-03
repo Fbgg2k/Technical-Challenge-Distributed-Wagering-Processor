@@ -150,6 +150,7 @@ describe('integração — constraints e atomicidade', () => {
   });
 
   test('dois publishers concorrentes não publicam em duplicidade', async () => {
+    await rawQuery(`truncate outbox_messages`);
     const { playerId, walletId } = await createWallet('100.00');
     await bet(walletId, playerId, '10.00', `pub-${Date.now()}`);
 

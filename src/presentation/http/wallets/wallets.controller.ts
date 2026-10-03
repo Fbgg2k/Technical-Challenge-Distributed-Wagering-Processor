@@ -1,9 +1,18 @@
-import { Controller, Get, Post, Body, Param, HttpCode, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+} from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { CreateWalletDto } from './dto';
 import { CreateWalletUseCase } from '../../../application/wallets/create-wallet.use-case';
 import { GetWalletUseCase } from '../../../application/wallets/get-wallet.use-case';
 import { GetWalletLedgerUseCase } from '../../../application/wallets/get-wallet-ledger.use-case';
+import { ReconcileWalletUseCase } from '../../../application/wallets/reconcile-wallet.use-case';
 
 @Controller('wallets')
 export class WalletsController {
@@ -14,6 +23,12 @@ export class WalletsController {
   async create(@Body() dto: CreateWalletDto) {
     const useCase = new CreateWalletUseCase(this.em);
     return useCase.execute(dto);
+  }
+
+  @Post(':walletId/reconciliation')
+  async reconcile(@Param('walletId') walletId: string) {
+    const useCase = new ReconcileWalletUseCase(this.em);
+    return useCase.execute(walletId);
   }
 
   @Get(':walletId/ledger')

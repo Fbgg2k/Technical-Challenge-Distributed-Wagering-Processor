@@ -48,6 +48,12 @@ class MetricsService {
     registers: [this.registry],
   });
 
+  readonly reconciliationDivergences = new Counter({
+    name: 'wager_reconciliation_divergences_total',
+    help: 'Divergências detectadas pela reconciliação',
+    registers: [this.registry],
+  });
+
   constructor() {
     collectDefaultMetrics({ register: this.registry });
   }

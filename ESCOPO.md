@@ -925,18 +925,18 @@ OpenTelemetry e dashboard são opcionais.
 
 Implementar:
 
-- [ ] operações do `Money`;
-- [ ] escala monetária;
-- [ ] entradas inválidas;
-- [ ] invariantes da Wallet;
-- [ ] BET;
-- [ ] WIN;
-- [ ] LOSS;
-- [ ] REFUND;
-- [ ] ROLLBACK;
-- [ ] conflito de moeda;
-- [ ] idempotency key com payload divergente;
-- [ ] transições de estado.
+- [x] operações do `Money` — `test/unit/money.test.ts` (add/subtract/negate, comparações, imutabilidade);
+- [x] escala monetária — `test/unit/money.test.ts` ("25.0" e "25" normalizam para "25.00");
+- [x] entradas inválidas — `test/unit/money.test.ts` (NaN, Infinity, notação científica, vazio, >2 casas, string inválida, moeda minúscula);
+- [x] invariantes da Wallet — `test/unit/wallet.test.ts` (version inicia em 1, incrementa só quando o saldo muda, saldo nunca negativo, rehydrate);
+- [x] BET — `test/unit/wager-transaction.test.ts` (afeta saldo, direção DEBIT);
+- [x] WIN — `test/unit/wager-transaction.test.ts` (afeta saldo, ROLLBACK inverte para DEBIT);
+- [x] LOSS — `test/unit/wager-transaction.test.ts` (não afeta saldo, sem ledger);
+- [x] REFUND — `test/unit/wager-transaction.test.ts` (exige referência, gera CREDIT);
+- [x] ROLLBACK — `test/unit/wager-transaction.test.ts` (exige referência, inverte direção da referência);
+- [x] conflito de moeda — `test/unit/money.test.ts` + `test/unit/wallet.test.ts` (operações entre moedas diferentes lançam erro);
+- [x] idempotency key com payload divergente — `test/integration/database-and-outbox.test.ts` (mesma chave + valor diferente → `ConflictException`, saldo e ledger inalterados) + `matchesPayload` unitário;
+- [x] transições de estado — `test/unit/wager-transaction.test.ts` (PROCESSED/REJECTED/FAILED terminais, OPENING bloqueado, PENDING inicial).
 
 ## 22.2 Testes de integração
 

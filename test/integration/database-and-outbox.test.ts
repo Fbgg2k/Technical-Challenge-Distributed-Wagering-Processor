@@ -149,6 +149,44 @@ describe('integração — constraints e atomicidade', () => {
     expect(Number(debits[0].c)).toBe(1);
   });
 
+  test('idempotência: mesma chave com payload divergente gera conflito', async () => {
+    const { playerId, walletId } = await createWallet('100.00');
+    const key = `conflict-${crypto.randomUUID()}`;
+
+    const r1 = await bet(walletId, playerId, '10.00', key);
+    expect(r1.status).toBe(WagerTransactionStatus.Processed);
+
+    // mesma idempotencyKey, payload diferente (valor distinto → hash distinto)
+    const em = await forkEm();
+    await expect(
+      new ProcessWagerTransactionUseCase(em).execute({
+        providerId: 'provider-a',
+        externalTransactionId: key,
+        idempotencyKey: `k:${key}`,
+        playerId,
+        walletId,
+        roundId: 'r1',
+        gameId: 'g1',
+        kind: WagerTransactionKind.Bet,
+        money: { amount: '20.00', currency: 'BRL' },
+      }),
+    ).rejects.toThrow('idempotency key conflict');
+
+    // saldo reflete apenas a primeira aposta
+    const wallets = await rawQuery<{ balance_amount: string }>(
+      'select balance_amount from wallets where id = ?',
+      [walletId],
+    );
+    expect(wallets[0].balance_amount).toBe('90.00');
+
+    // nenhum lançamento extra foi criado
+    const debits = await rawQuery<{ c: string }>(
+      `select count(*) as c from wallet_ledger_entries where wallet_id = ? and direction = 'DEBIT'`,
+      [walletId],
+    );
+    expect(Number(debits[0].c)).toBe(1);
+  });
+
   test('dois publishers concorrentes não publicam em duplicidade', async () => {
     await rawQuery(`truncate outbox_messages`);
     const { playerId, walletId } = await createWallet('100.00');

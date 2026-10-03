@@ -31,6 +31,22 @@ services:
       - localstack_data:/var/lib/localstack
       - ./docker/localstack/setup-queues.sh:/etc/localstack/init/ready.d/setup-queues.sh
 
+  # Identity Provider (OIDC) — opcional, só sobe com --profile auth
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    profiles:
+      - auth
+    volumes:
+      - ./docker/keycloak/setup-realm.sh:/opt/keycloak/bin/setup-realm.sh
+
   app:
     build: .
     depends_on:

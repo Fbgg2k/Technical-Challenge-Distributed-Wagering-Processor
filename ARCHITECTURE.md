@@ -214,11 +214,10 @@ outbox. Commit antes de qualquer publicação SQS ou resposta ao provedor.
 
 ## 17. Known Limitations
 
-- **Autenticação não implementada** (não vale pontos no desafio). Desenho adotado para
-  extensão: um `AuthGuard` do Nest no pipeline global, com um `ProviderIdentityPort`
-  que resolve o `providerId` a partir do token OIDC emitido por um IdP externo
-  (Keycloak/Zitadel) — endpoints de health permanecem abertos e mensagens da fila são
-  canal interno confiável. Nenhuma tabela própria de usuários/senhas.
+- **Autenticação**: implementada como OIDC via JWKS (Keycloak/Zitadel), mas
+  **desabilitada por padrão** (`AUTH_ENABLED=false`, guard no-op). Nenhuma
+  tabela própria de usuários/senhas; extensão via `ProviderIdentityPort`.
+  Health e metrics permanecem abertos (`@Public()`).
 - Moeda única em prática (BRL); modelo multi-moeda mantido e testado.
 - `payloadHash` do SQS é calculado sobre o `data` da mensagem; o `messageId` da fila
   é usado como chave da inbox.
@@ -227,7 +226,7 @@ outbox. Commit antes de qualquer publicação SQS ou resposta ao provedor.
 
 ## 18. Future Improvements
 
-- Keycloak via Docker Compose + `AuthGuard` OIDC.
 - OpenTelemetry traces e dashboard de métricas.
-- Teste de carga (`bun run test:load`) com metodologia e percentis documentados.
+- Teste de carga periódico com baseline de percentis (já existe `bun run test:load`).
 - Snapshot de reconciliação periódica e alertas sobre `wager_reconciliation_divergences_total`.
+- Multi-moeda em produção (modelo já preparado).

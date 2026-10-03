@@ -21,6 +21,7 @@ Invariantes globais:
 
 - **Bun 1.x** (runtime, package manager e test runner)
 - **Docker + Docker Compose** (PostgreSQL 16 e LocalStack 3.8 para SQS)
+- Opcional: Keycloak (autenticação OIDC, profile `auth`)
 - Opcional: `psql`/`awslocal` para inspeção manual (disponíveis dentro dos containers)
 
 ## 3. Stack
@@ -136,8 +137,9 @@ bun run format           # Prettier
 
 ## 12. API
 
-Autenticação: **não implementada** (documentado em `ARCHITECTURE.md` §17) — ponto de extensão
-via `AuthGuard`/`ProviderIdentityPort`. Endpoints de health ficam abertos.
+Autenticação: OIDC via JWKS (Keycloak/Zitadel), **desabilitada por padrão**
+(`AUTH_ENABLED=false`). Ativação e comandos na seção abaixo. Endpoints de
+health e métricas ficam abertos.
 
 | Método | Endpoint | Descrição |
 |---|---|---|
@@ -151,6 +153,36 @@ via `AuthGuard`/`ProviderIdentityPort`. Endpoints de health ficam abertos.
 | `GET` | `/health/live` | Liveness (sem auth) |
 | `GET` | `/health/ready` | Readiness: PostgreSQL + SQS (sem auth) |
 | `GET` | `/metrics` | Métricas Prometheus |
+
+### Autenticação (OIDC, opcional)
+
+Por padrão `AUTH_ENABLED=false` (guard atua como no-op — extensão explícita,
+documentada em `ARCHITECTURE.md`). Para ativar com Keycloak:
+
+```bash
+docker compose --profile auth up -d keycloak
+docker compose exec keycloak bash /opt/keycloak/bin/setup-realm.sh
+# edite .env: AUTH_ENABLED=true, AUTH_ISSUER=http://localhost:8080/realms/jungle,
+# AUTH_JWKS_URL=http://localhost:8080/realms/jungle/protocol/openid-connect/certs
+bun run start
+```
+
+Todos os endpoints (exceto `/health/*` e `/metrics`) exigem
+`Authorization: Bearer <jwt>` válido contra o issuer configurado
+(verificação assimétrica via JWKS, cache de 5 min).
+
+## 13. Teste de carga
+
+```bash
+LOAD_DURATION_MS=30000 LOAD_CONCURRENCY=50 bun run test:load
+```
+
+Dispara `POST /wagering/transactions` concorrentes por N segundos e imprime
+JSON com throughput, p50/p95/p99, taxa de erro, conflitos de concorrência,
+outbox lag e a reconciliação final. Exemplo real (hot wallet, 20 workers,
+10s): **70 req/s**, p50 188 ms, p95 760 ms, p99 1982 ms, 0 erros,
+reconciliação consistente — a serialização por `FOR UPDATE` na mesma wallet
+é o gargalo esperado em hot wallet (unidade de concorrência = `walletId`).
 
 ### Exemplo — criar wallet
 
@@ -234,7 +266,7 @@ e rodam contra PostgreSQL e LocalStack reais — **sem mocks de banco ou fila**.
 
 ## 17. Limitações
 
-- Autenticação não implementada (não vale pontos no desafio; extensão documentada em `ARCHITECTURE.md`);
+- Autenticação OIDC implementada mas desabilitada por padrão (`AUTH_ENABLED=false`);
 - Moeda única (BRL) em prática, modelo preparado para multi-moeda;
 - Métricas em memória (sem scrape remoto persistente);
 - OpenTelemetry/dashboard opcional não implementado.

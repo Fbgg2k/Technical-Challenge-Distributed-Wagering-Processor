@@ -9,11 +9,13 @@ import { OutboxPublisher } from './infrastructure/messaging/outbox/outbox-publis
 import { PendingReferenceWorker } from './infrastructure/messaging/outbox/pending-reference.worker';
 import { HealthController } from './presentation/http/health/health.controller';
 import { MetricsController } from './presentation/http/metrics/metrics.controller';
+import { AuthModule } from './presentation/http/auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MikroOrmModule.forRoot(mikroOrmConfig),
+    AuthModule.register(),
   ],
   controllers: [WalletsController, WageringController, HealthController, MetricsController],
   providers: [WagerTransactionConsumer, OutboxPublisher, PendingReferenceWorker],

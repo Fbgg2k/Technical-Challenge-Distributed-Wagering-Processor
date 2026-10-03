@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   Logger,
+  SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -13,7 +14,9 @@ import {
 } from '../../../domain/shared/ports/provider-identity.port';
 
 export const IS_PUBLIC_KEY = 'isPublic';
-export const Public = () => Reflect.metadata(IS_PUBLIC_KEY, true);
+// SetMetadata define o metadado em descriptor.value (o handler),
+// que é onde o Reflector do NestJS lê — não em (target, key).
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 
 /**
  * AuthGuard OIDC: valida o Bearer token contra o JWKS do IdP.

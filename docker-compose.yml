@@ -36,16 +36,14 @@ services:
     image: quay.io/keycloak/keycloak:26.0
     command: start-dev
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
     ports:
       - "8080:8080"
     profiles:
       - auth
-    volumes:
-      - ./docker/keycloak/setup-realm.sh:/opt/keycloak/bin/setup-realm.sh
 
   app:
     build: .

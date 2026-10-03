@@ -161,15 +161,26 @@ documentada em `ARCHITECTURE.md`). Para ativar com Keycloak:
 
 ```bash
 docker compose --profile auth up -d keycloak
-docker compose exec keycloak bash /opt/keycloak/bin/setup-realm.sh
-# edite .env: AUTH_ENABLED=true, AUTH_ISSUER=http://localhost:8080/realms/jungle,
+bun scripts/setup-keycloak-realm.ts
+# .env: AUTH_ENABLED=true, AUTH_ISSUER=http://localhost:8080/realms/jungle,
 # AUTH_JWKS_URL=http://localhost:8080/realms/jungle/protocol/openid-connect/certs
 bun run start
 ```
 
-Todos os endpoints (exceto `/health/*` e `/metrics`) exigem
-`Authorization: Bearer <jwt>` válido contra o issuer configurado
-(verificação assimétrica via JWKS, cache de 5 min).
+O script cria o realm `jungle`, o client `jungle-gaming` (direct access
+grants) e o usuário de teste `player`/`player`, e neutraliza as required
+actions (`VERIFY_PROFILE` etc.) que bloqueiam o direct grant no Keycloak 26.
+
+Todos os endpoints (exceto `/health/*` e `/metrics`, marcados com `@Public()`)
+exigem `Authorization: Bearer <jwt>` válido contra o issuer configurado
+(verificação assimétrica via JWKS, cache de 5 min, issuer e audience
+validados). Token de teste:
+
+```bash
+TOKEN=$(wget -qO- --post-data="username=player&password=player&grant_type=password&client_id=jungle-gaming" \
+  http://localhost:8080/realms/jungle/protocol/openid-connect/token | sed 's/.*"access_token":"\([^"]*\)".*/\1/')
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/wallets -X POST ...
+```
 
 ## 13. Teste de carga
 

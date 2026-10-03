@@ -4,7 +4,7 @@
   "description": "Distributed Wagering Processor — Jungle Gaming Technical Challenge",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && rm -rf dist/test",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
@@ -13,7 +13,7 @@
     "migration:down": "mikro-orm migration:down",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "test": "bun test",
+    "test": "bun test test",
     "test:unit": "bun test test/unit",
     "test:integration": "bun test test/integration",
     "test:concurrency": "bun test test/concurrency",

@@ -14,11 +14,11 @@
     "migration:down": "mikro-orm migration:down",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "test": "bun test test",
+    "test": "bun test --preload ./test/helpers/setup-schema.ts test",
     "test:unit": "bun test test/unit",
-    "test:integration": "bun test test/integration",
-    "test:concurrency": "bun test test/concurrency",
-    "test:e2e": "bun test test/concurrency/required-scenarios.test.ts",
+    "test:integration": "bun test --preload ./test/helpers/setup-schema.ts test/integration",
+    "test:concurrency": "bun test --preload ./test/helpers/setup-schema.ts test/concurrency",
+    "test:e2e": "bun test --preload ./test/helpers/setup-schema.ts test/concurrency/required-scenarios.test.ts",
     "test:load": "bun scripts/load.ts"
   },
   "dependencies": {

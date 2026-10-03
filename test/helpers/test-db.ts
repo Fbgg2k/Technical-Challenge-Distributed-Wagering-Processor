@@ -2,6 +2,9 @@ import { MikroORM, EntityManager } from '@mikro-orm/postgresql';
 import { randomUUID } from 'crypto';
 import { mikroOrmConfig } from '../../src/infrastructure/database/mikro-orm.config';
 
+// O schema do banco de testes é garantido pelo preload
+// `test/helpers/setup-schema.ts` (script `test` do package.json).
+
 let orm: MikroORM | undefined;
 let ormPromise: Promise<MikroORM> | undefined;
 

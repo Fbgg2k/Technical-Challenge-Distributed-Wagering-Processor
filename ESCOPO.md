@@ -944,17 +944,17 @@ Utilizar PostgreSQL e LocalStack reais em containers.
 
 Testar:
 
-- [ ] migrations;
-- [ ] constraints;
-- [ ] atomicidade;
-- [ ] wallet + ledger;
-- [ ] inbox;
-- [ ] outbox;
-- [ ] publishers concorrentes;
-- [ ] retry;
-- [ ] DLQ;
-- [ ] redelivery;
-- [ ] recuperação após reinicialização.
+- [x] migrations — `test/integration/migrations.test.ts` (up() cria schema completo em banco isolado; down() reverte migration por migration; up() restaura) + preload `test/helpers/setup-schema.ts` (suíte auto-contida: banco vazio → migrations aplicadas automaticamente);
+- [x] constraints — `test/integration/database-and-outbox.test.ts` ("constraints: saldo negativo violado, ledger append-only, wallet duplicada");
+- [x] atomicidade — `test/integration/database-and-outbox.test.ts` ("atomicidade: wallet + tx + ledger + inbox + outbox consistentes");
+- [x] wallet + ledger — invariante `wallet.balance == Σ(ledger)` verificado no teste de atomicidade e no cenário final;
+- [x] inbox — `test/integration/database-and-outbox.test.ts` ("inbox: redelivery com mesmo messageId não duplica efeito");
+- [x] outbox — `test/integration/database-and-outbox.test.ts` (eventos persistidos na mesma transação) + `test/integration/sqs-dlq-retry-recovery.test.ts`;
+- [x] publishers concorrentes — `test/integration/database-and-outbox.test.ts` ("dois publishers concorrentes não publicam em duplicidade", claim com `FOR UPDATE SKIP LOCKED`);
+- [x] retry — `test/integration/sqs-dlq-retry-recovery.test.ts` ("outbox retry: falha no SQS incrementa attempts e agenda backoff exponencial") + `retryPendingReference` em `test/concurrency/required-scenarios.test.ts`;
+- [x] DLQ — `test/integration/sqs-dlq-retry-recovery.test.ts` ("DLQ: RedrivePolicy configurada (maxReceiveCount=5 → DLQ ARN) e consumer não deleta mensagem malformada" — comportamento real do consumer contra SQS; o redrive automático é nativo da AWS SQS, o LocalStack local não o implementa para FIFO);
+- [x] redelivery — `test/integration/database-and-outbox.test.ts` (inbox) + `test/concurrency/required-scenarios.test.ts` ("REFUND antes da referência e worker morto antes do ack");
+- [x] recuperação após reinicialização — `test/integration/sqs-dlq-retry-recovery.test.ts` ("recuperação: evento pendente na outbox (crash pós-commit) é publicado por nova instância").
 
 ## 22.3 Testes de concorrência
 

@@ -54,6 +54,17 @@ Controllers → Use Cases → Domain (Money, Wallet, WagerTransaction, LedgerEnt
 
 ## 5. Pré-requisitos e setup
 
+Na primeira execução, crie seu arquivo de configuração local a partir do modelo:
+
+```bash
+cp .env.example .env
+```
+
+Edite `.env` se precisar ajustar valores para seu ambiente. O arquivo `.env` é
+ignorado pelo Git para evitar o envio de configurações locais e credenciais; não
+o envie ao repositório. O `.env.example` contém valores de exemplo e deve ser
+mantido atualizado quando novas variáveis forem necessárias.
+
 ```bash
 # 1. Instalar dependências
 bun install
@@ -64,8 +75,7 @@ docker compose up -d postgres localstack
 # 3. Rodar migrations
 bun run migration:up
 
-# 4. Rodar a aplicação (consumer SQS e workers habilitados via .env)
-cp .env.example .env
+# 4. Rodar a aplicação
 bun run start
 ```
 

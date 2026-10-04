@@ -4,6 +4,9 @@ Serviço financeiro distribuído para processar transações de apostas de múlt
 
 O desafio técnico original da Jungle Gaming está em [`README_JG.md`](./README_JG.md) e o escopo detalhado em [`ESCOPO.md`](./ESCOPO.md). As decisões de arquitetura estão em [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
+Para preparar o ambiente e executar testes manuais e automatizados, consulte
+[`README_TESTES.md`](./README_TESTES.md).
+
 ---
 
 ## 1. Descrição

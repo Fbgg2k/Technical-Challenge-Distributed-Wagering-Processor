@@ -1,5 +1,5 @@
 import { Controller, Get, Res } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { metrics } from '../../../infrastructure/observability/metrics/metrics.service';
 import { Public } from '../auth/jwt-auth.guard';
 

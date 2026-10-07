@@ -8,8 +8,9 @@ import {
   GetQueueUrlCommand,
   GetQueueAttributesCommand,
 } from '@aws-sdk/client-sqs';
-import { getTestOrm, forkEm, closeTestOrm } from '../helpers/test-db';
+import { getTestOrm, forkEm, closeTestOrm, newPlayerId } from '../helpers/test-db';
 import { OutboxPublisher } from '../../src/infrastructure/messaging/outbox/outbox-publisher.service';
+import { CreateWalletUseCase } from '../../src/application/wallets/create-wallet.use-case';
 
 /**
  * Cenários de integração SQS:
@@ -163,6 +164,89 @@ describe('SQS — DLQ, retry do outbox e recuperação', () => {
       await client.send(
         new DeleteMessageCommand({ QueueUrl: mainUrl, ReceiptHandle: m.ReceiptHandle! }),
       );
+    }
+  }, 30_000);
+
+  test('consumer confirma o commit antes de fazer ack da mensagem válida', async () => {
+    const client = sqs();
+    const mainUrl = await queueUrl(client, 'wager-transactions.fifo');
+    const playerId = newPlayerId();
+    const wallet = await new CreateWalletUseCase(await forkEm()).execute({
+      playerId,
+      initialBalance: { amount: '100.00', currency: 'BRL' },
+    });
+    const messageId = `commit-before-ack-${crypto.randomUUID()}`;
+    const externalTransactionId = `sqs-bet-${crypto.randomUUID()}`;
+    const originalEnabled = process.env.SQS_CONSUMER_ENABLED;
+    const originalQueue = process.env.SQS_WAGER_QUEUE_URL;
+    process.env.SQS_CONSUMER_ENABLED = 'true';
+    process.env.SQS_WAGER_QUEUE_URL = mainUrl;
+
+    const { WagerTransactionConsumer } = await import(
+      '../../src/presentation/messaging/consumers/wager-transaction.consumer'
+    );
+    const consumer = new WagerTransactionConsumer(await forkEm());
+
+    try {
+      await client.send(
+        new SendMessageCommand({
+          QueueUrl: mainUrl,
+          MessageBody: JSON.stringify({
+            messageId,
+            type: 'WagerTransactionRequested',
+            occurredAt: new Date().toISOString(),
+            data: {
+              providerId: 'provider-sqs',
+              externalTransactionId,
+              idempotencyKey: `key:${externalTransactionId}`,
+              playerId,
+              walletId: wallet.id,
+              roundId: 'round-sqs',
+              gameId: 'game-sqs',
+              kind: 'BET',
+              money: { amount: '10.00', currency: 'BRL' },
+            },
+          }),
+          MessageGroupId: `wallet-${wallet.id}`,
+          MessageDeduplicationId: messageId,
+        }),
+      );
+      await consumer.onModuleInit();
+
+      let committed = false;
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const rows = await rawQuery<{ balance_amount: string }>(
+          'select balance_amount from wallets where id = ?',
+          [wallet.id],
+        );
+        if (rows[0]?.balance_amount === '90.00') {
+          committed = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      expect(committed).toBe(true);
+
+      const inbox = await rawQuery<{ processed_at: Date | null }>(
+        `select processed_at from inbox_messages
+         where message_id = ? and consumer_name = 'wager-transaction-consumer'`,
+        [messageId],
+      );
+      expect(inbox).toHaveLength(1);
+      expect(inbox[0].processed_at).not.toBeNull();
+
+      const redelivery = await client.send(
+        new ReceiveMessageCommand({
+          QueueUrl: mainUrl,
+          MaxNumberOfMessages: 1,
+          WaitTimeSeconds: 1,
+        }),
+      );
+      expect(redelivery.Messages ?? []).toHaveLength(0);
+    } finally {
+      await consumer.onModuleDestroy();
+      process.env.SQS_CONSUMER_ENABLED = originalEnabled;
+      process.env.SQS_WAGER_QUEUE_URL = originalQueue;
     }
   }, 30_000);
 

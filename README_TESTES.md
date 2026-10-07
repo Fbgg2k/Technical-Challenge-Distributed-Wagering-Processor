@@ -252,6 +252,43 @@ bun run typecheck
 bun run build
 ```
 
+### Matriz de cobertura automatizada
+
+| Requisito do `README_JG.md`                                                                                                 | Cobertura                                         |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Precisão, escala, imutabilidade e moedas de `Money`                                                                         | `test/unit/money.test.ts`                         |
+| Canonicalização e hash de payload                                                                                           | `test/unit/payload-hash.test.ts`                  |
+| Invariantes e versionamento da wallet                                                                                       | `test/unit/wallet.test.ts`                        |
+| Estados de transação, kinds e direção de reversão                                                                           | `test/unit/wager-transaction.test.ts`             |
+| `BET`, `WIN`, `LOSS`, `REFUND`, `ROLLBACK`, saldo insuficiente, regras de referência e replay do saldo original             | `test/integration/wager-business-rules.test.ts`   |
+| Rotas HTTP, DTOs, idempotência, paginação do ledger, health, reconciliação e exposição das métricas                         | `test/integration/http-api.test.ts`               |
+| Constraints, ledger append-only, atomicidade, inbox/redelivery e publishers concorrentes                                    | `test/integration/database-and-outbox.test.ts`    |
+| Migrations reversíveis e constraints do schema                                                                              | `test/integration/migrations.test.ts`             |
+| SQS real, ack após commit, DLQ, retry do outbox e recuperação                                                               | `test/integration/sqs-dlq-retry-recovery.test.ts` |
+| Apostas concorrentes, 50 redeliveries, wallets distintas, 3 instâncias lógicas, referências fora de ordem e reinicialização | `test/concurrency/`                               |
+
+Na última execução desta suíte, `bun run test` terminou com **51 testes
+aprovados, 0 falhas**, em 11 arquivos. `bun run typecheck` também passou.
+`bun run build` também foi executado com sucesso.
+Esses resultados refletem a execução local documentada e devem ser repetidos
+depois de alterações no código.
+
+### Limites da cobertura automatizada atual
+
+- O cenário de três instâncias usa três operações concorrentes com `EntityManager`
+  independentes no mesmo processo Bun; não inicia três processos de sistema
+  separados.
+- A redelivery após commit é testada por repetição com o mesmo inbox; não há um
+  teste que envie `SIGTERM` ao processo exatamente entre o commit e o ack, nem
+  que valide o encerramento enquanto há mensagens em andamento.
+- O teste de observabilidade verifica a disponibilidade dos nomes de métricas e
+  que a métrica de duplicatas aumenta. Ainda não verifica todos os contadores
+  (por exemplo retry/DLQ/lock/outbox lag) nem comprova em logs cada identificador
+  exigido ou a ausência de dados financeiros sensíveis.
+- OIDC é opcional no desafio e permanece desabilitado por padrão; a suíte HTTP
+  valida as rotas no modo local sem autenticação, não uma integração com
+  Keycloak/Zitadel.
+
 O teste de carga é opcional e envia várias transações concorrentes:
 
 ```bash

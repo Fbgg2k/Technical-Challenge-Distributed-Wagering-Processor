@@ -25,19 +25,7 @@ async function hasTables(): Promise<boolean> {
   return rows.length > 0;
 }
 
-if (!(await hasTables())) {
-  try {
-    await orm.getMigrator().up();
-  } catch {
-    // o migrator do MikroORM pode reportar erro espúrio de criação
-    // duplicada da tabela de controle em schema vazio; as migrations
-    // são aplicadas mesmo assim — aguarda a conclusão abaixo
-  }
-  // aguarda o schema ficar pronto (conclusão em background)
-  for (let i = 0; i < 50 && !(await hasTables()); i++) {
-    await new Promise((r) => setTimeout(r, 200));
-  }
-}
+await orm.getMigrator().up();
 
 if (!(await hasTables())) {
   throw new Error('schema de testes não ficou pronto (wallets table missing)');

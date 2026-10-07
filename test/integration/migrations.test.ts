@@ -75,10 +75,12 @@ describe('migrations (banco isolado)', () => {
     expect(names).toContain('wallets_balance_non_negative');
     expect(names).toContain('wallets_player_id_currency_unique');
 
-    // colunas da segunda migration
+    // colunas das migrations de referências pendentes e resposta idempotente
     const cols = await columns(orm, 'wager_transactions');
     expect(cols).toContain('reference_attempts');
     expect(cols).toContain('reference_next_attempt_at');
+    expect(cols).toContain('response_balance_amount');
+    expect(cols).toContain('response_balance_currency');
 
     await orm.close();
   });
@@ -86,12 +88,18 @@ describe('migrations (banco isolado)', () => {
   test('down() reverte migration por migration (reversível)', async () => {
     const orm = await initScratch();
 
-    // reverte a última migration (colunas de pending reference)
+    // reverte a última migration (snapshot de resposta idempotente)
     await orm.getMigrator().down();
     let cols = await columns(orm, 'wager_transactions');
+    expect(cols).not.toContain('response_balance_amount');
+    expect(cols).toContain('reference_attempts');
+
+    // reverte a migration de referências pendentes
+    await orm.getMigrator().down();
+    cols = await columns(orm, 'wager_transactions');
     expect(cols).not.toContain('reference_attempts');
 
-    // reverte a primeira migration (drop de todo o schema)
+    // reverte a migration inicial (drop de todo o schema)
     await orm.getMigrator().down();
     const t = await tables(orm);
     expect(t).not.toContain('wallets');
@@ -105,6 +113,7 @@ describe('migrations (banco isolado)', () => {
     expect(t2).toContain('wallets');
     const cols2 = await columns(orm, 'wager_transactions');
     expect(cols2).toContain('reference_attempts');
+    expect(cols2).toContain('response_balance_amount');
 
     await orm.close();
     await adminExec(`drop database if exists ${SCRATCH_DB} with (force)`);

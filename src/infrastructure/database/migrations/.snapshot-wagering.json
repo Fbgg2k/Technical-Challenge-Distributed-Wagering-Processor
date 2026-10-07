@@ -478,6 +478,26 @@
           "length": 6,
           "mappedType": "datetime"
         },
+        "response_balance_amount": {
+          "name": "response_balance_amount",
+          "type": "numeric(20,2)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "precision": 20,
+          "scale": 2,
+          "mappedType": "decimal"
+        },
+        "response_balance_currency": {
+          "name": "response_balance_currency",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "text"
+        },
         "reference_attempts": {
           "name": "reference_attempts",
           "type": "int",

@@ -43,6 +43,8 @@ export interface WagerTransactionState {
   status: WagerTransactionStatus;
   failureCode?: FailureCode;
   processedAt?: Date;
+  responseBalanceAmount?: string;
+  responseBalanceCurrency?: string;
   createdAt: Date;
 }
 
@@ -67,6 +69,7 @@ export class WagerTransaction {
     private _processedAt?: Date,
     private _referenceAttempts = 0,
     private _referenceNextAttemptAt?: Date,
+    private _responseBalance?: Money,
   ) {}
 
   static create(props: CreateWagerTransactionProps): WagerTransaction {
@@ -146,6 +149,12 @@ export class WagerTransaction {
       state.processedAt,
       state.referenceAttempts ?? 0,
       state.referenceNextAttemptAt,
+      state.responseBalanceAmount && state.responseBalanceCurrency
+        ? Money.from({
+            amount: state.responseBalanceAmount,
+            currency: state.responseBalanceCurrency,
+          })
+        : undefined,
     );
   }
 
@@ -167,6 +176,14 @@ export class WagerTransaction {
   get referenceNextAttemptAt(): Date | undefined {
     return this._referenceNextAttemptAt;
   }
+  get responseBalance(): Money | undefined {
+    return this._responseBalance;
+  }
+
+  captureResponseBalance(balance: Money): void {
+    this._responseBalance = balance;
+  }
+
   get requiresReference(): boolean {
     return this.kind === WagerTransactionKind.Refund || this.kind === WagerTransactionKind.Rollback;
   }

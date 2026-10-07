@@ -61,6 +61,12 @@ export class WagerTransactionOrmEntity {
   @Property({ type: 'timestamptz', nullable: true })
   processedAt?: Date;
 
+  @Property({ type: 'decimal', precision: 20, scale: 2, nullable: true })
+  responseBalanceAmount?: string;
+
+  @Property({ type: 'text', nullable: true })
+  responseBalanceCurrency?: string;
+
   @Property({ type: 'integer', default: 0 })
   referenceAttempts = 0;
 

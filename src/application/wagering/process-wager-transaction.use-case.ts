@@ -140,7 +140,7 @@ export class ProcessWagerTransactionUseCase {
             transactionId: existing.id,
             status: existing.status,
             failureCode: existing.failureCode,
-            balance: wallet?.balance.toJSON(),
+            balance: existing.responseBalance?.toJSON() ?? wallet?.balance.toJSON(),
             idempotentReplay: true,
           };
         }
@@ -158,7 +158,7 @@ export class ProcessWagerTransactionUseCase {
             transactionId: sameExternal.id,
             status: sameExternal.status,
             failureCode: sameExternal.failureCode,
-            balance: wallet?.balance.toJSON(),
+            balance: sameExternal.responseBalance?.toJSON() ?? wallet?.balance.toJSON(),
             idempotentReplay: true,
           };
         }
@@ -201,6 +201,7 @@ export class ProcessWagerTransactionUseCase {
 
       const reject = async (code: FailureCode): Promise<ProcessTransactionResult> => {
         tx.reject(code);
+        tx.captureResponseBalance(wallet.balance);
         await txRepo.save(tx);
         await this.enqueue(em, WagerTransactionRejected.from(tx, { correlationId: input.correlationId ?? tx.id }));
         return {
@@ -235,6 +236,7 @@ export class ProcessWagerTransactionUseCase {
               balanceAfter: wallet.balance,
             });
             tx.markProcessed(undefined, new Date());
+            tx.captureResponseBalance(wallet.balance);
             await walletRepo.save(wallet);
             await txRepo.save(tx);
             await ledgerRepo.save(entry);
@@ -265,6 +267,7 @@ export class ProcessWagerTransactionUseCase {
             balanceAfter: wallet.balance,
           });
           tx.markProcessed(undefined, new Date());
+          tx.captureResponseBalance(wallet.balance);
           await walletRepo.save(wallet);
           await txRepo.save(tx);
           await ledgerRepo.save(entry);
@@ -278,6 +281,7 @@ export class ProcessWagerTransactionUseCase {
         }
         case WagerTransactionKind.Loss: {
           tx.markProcessed(undefined, new Date());
+          tx.captureResponseBalance(wallet.balance);
           await txRepo.save(tx);
           await this.enqueue(em, WagerTransactionProcessed.from(tx, { correlationId: input.correlationId ?? tx.id }));
           return {
@@ -307,7 +311,7 @@ export class ProcessWagerTransactionUseCase {
             transactionId: existing.id,
             status: existing.status,
             failureCode: existing.failureCode,
-            balance: wallet?.balance.toJSON(),
+            balance: existing.responseBalance?.toJSON() ?? wallet?.balance.toJSON(),
             idempotentReplay: true,
           };
         }
@@ -346,6 +350,7 @@ export class ProcessWagerTransactionUseCase {
 
     if (!reference) {
       tx.markPendingReference();
+      tx.captureResponseBalance(wallet.balance);
       await txRepo.save(tx);
       await this.enqueue(em, WagerTransactionPendingReference.from(tx, { correlationId: input.correlationId ?? tx.id }));
       return {
@@ -416,6 +421,7 @@ export class ProcessWagerTransactionUseCase {
       balanceAfter: wallet.balance,
     });
     tx.markProcessed(reference.id, new Date());
+    tx.captureResponseBalance(wallet.balance);
     await walletRepo.save(wallet);
     await txRepo.save(tx);
     await ledgerRepo.save(entry);
@@ -473,6 +479,7 @@ export class ProcessWagerTransactionUseCase {
 
       const reject = async (code: FailureCode): Promise<ProcessTransactionResult> => {
         tx.reject(code);
+        tx.captureResponseBalance(wallet.balance);
         await txRepo.save(tx);
         await this.enqueue(em, WagerTransactionRejected.from(tx, { correlationId: tx.id }));
         return { transactionId: tx.id, status: tx.status, failureCode: code, balance: wallet.balance.toJSON(), idempotentReplay: false };
@@ -488,6 +495,7 @@ export class ProcessWagerTransactionUseCase {
           await this.enqueue(em, WagerTransactionRejected.from(tx, { correlationId: tx.id }));
           return;
         }
+        tx.captureResponseBalance(wallet.balance);
         await txRepo.save(tx);
         return;
       }

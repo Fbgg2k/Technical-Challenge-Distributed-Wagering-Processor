@@ -103,6 +103,8 @@ teste de concorrência real.
   transporte não entram.
 - Mesma key + mesmo hash → **replay** com o resultado original (inclusive o saldo
   observado).
+- O saldo observado na resposta é persistido junto à transação, inclusive para
+  rejeições sem lançamento no ledger; um replay não usa o saldo mais recente da wallet.
 - Mesma key + hash diferente → **conflito (409)**, não replay.
 - A unicidade é garantida por `UNIQUE(idempotency_key)` e
   `UNIQUE(providerId, externalTransactionId)` no schema, não por cache em memória.

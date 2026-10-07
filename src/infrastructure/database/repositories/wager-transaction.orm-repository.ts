@@ -26,6 +26,8 @@ export class WagerTransactionOrmRepository {
       status: orm.status,
       failureCode: orm.failureCode as FailureCode | undefined,
       processedAt: orm.processedAt,
+      responseBalanceAmount: orm.responseBalanceAmount,
+      responseBalanceCurrency: orm.responseBalanceCurrency,
       referenceAttempts: orm.referenceAttempts,
       referenceNextAttemptAt: orm.referenceNextAttemptAt,
       createdAt: orm.createdAt,
@@ -83,6 +85,8 @@ export class WagerTransactionOrmRepository {
         status: tx.status,
         failureCode: tx.failureCode,
         processedAt: tx.processedAt,
+        responseBalanceAmount: tx.responseBalance?.toDecimalString(),
+        responseBalanceCurrency: tx.responseBalance?.currency,
         referenceAttempts: tx.referenceAttempts,
         referenceNextAttemptAt: tx.referenceNextAttemptAt,
         createdAt: tx.createdAt,
@@ -93,6 +97,10 @@ export class WagerTransactionOrmRepository {
       orm.failureCode = tx.failureCode;
       orm.processedAt = tx.processedAt;
       orm.referenceTransactionId = tx.referenceTransactionId;
+      if (tx.responseBalance) {
+        orm.responseBalanceAmount = tx.responseBalance.toDecimalString();
+        orm.responseBalanceCurrency = tx.responseBalance.currency;
+      }
       orm.referenceAttempts = tx.referenceAttempts;
       orm.referenceNextAttemptAt = tx.referenceNextAttemptAt;
     }
